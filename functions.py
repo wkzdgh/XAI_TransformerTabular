@@ -13,33 +13,46 @@ import models
 import shap
 from openpyxl import Workbook, load_workbook
 
-# def write_dataframes_to_excel_sheet(writer, dataframes, dir, name):
-#     return 0
-
-def export_explanation_to_excel(result_path, name_dataset, dict_explanations):
-    if not os.path.exists(result_path + os.sep + "explanation.xlsx"):
+def create_xlsx(path, name_dataset):
+    if not os.path.exists(path):
         workbook = Workbook()
         workbook.active.title = name_dataset
-        workbook.save(result_path + os.sep + "explanation.xlsx")
+        workbook.save(path)
+
+def create_sheet(path, name_dataset):
+    wb = load_workbook(path)
+    if name_dataset not in wb.sheetnames:
+        wb.create_sheet(name_dataset)
+        wb.save(path)
+
+def export_explanation_to_excel(result_path, name_dataset, dict_explanation):
+    path = result_path + os.sep + "explanation.xlsx"
+    create_xlsx(path, name_dataset)
+    create_sheet(path, name_dataset)
 
     writer = pd.ExcelWriter(path=(result_path + os.sep + "explanation.xlsx"), mode="a", engine="openpyxl", if_sheet_exists="overlay")
     
-    #para meter pares de elementos en una celda de un dataframe
-    #df.at[0, 1] = ["a", "b"] #fila 0, columna 1
-    #si es necesario cambiar el tipo de la columna para que incluya listas se pondría: df[1] = df[1].astype("object")
-
+    row = 1
+    for key in dict_explanation:
+        column = 1
+        writer.sheets[name_dataset].cell(row=row, column=column).value = key
+        row += 1
+        for feature, expl in dict_explanation[key]:
+            writer.sheets[name_dataset].cell(row=row, column=column).value = feature
+            row += 1
+            expl["MeanRelevance"] = expl.mean(axis=1)
+            expl.to_excel(writer, sheet_name=name_dataset, startrow=row-1, startcol=column-1)
+            row -= 1
+            column += expl.shape[1] + 2 #sumar número de columnas más 2 de espacio entre tablas
+            num_rows = expl.shape[0] + 4
+        row += num_rows #sumar número de filas más 4 de espacio entre tablas
+    writer.close()
     return 0
 
 def export_accuracy_to_excel(result_path, name_dataset, dict_accuracy, nfeats, name_folders, name_nfeats):
-    if not os.path.exists(result_path + os.sep + "accuracy.xlsx"):
-        workbook = Workbook()
-        workbook.active.title = name_dataset
-        workbook.save(result_path + os.sep + "accuracy.xlsx")
-    
-    wb = load_workbook(result_path + os.sep + "accuracy.xlsx")
-    if name_dataset not in wb.sheetnames:
-        wb.create_sheet(name_dataset)
-        wb.save(result_path + os.sep + "accuracy.xlsx")
+    path = result_path + os.sep + "accuracy.xlsx"
+    create_xlsx(path, name_dataset)
+    create_sheet(path, name_dataset)
     
     writer = pd.ExcelWriter(path=(result_path + os.sep + "accuracy.xlsx"), mode="a", engine="openpyxl", if_sheet_exists="overlay")
 
@@ -63,32 +76,12 @@ def export_accuracy_to_excel(result_path, name_dataset, dict_accuracy, nfeats, n
         dataframes[i].to_excel(writer, sheet_name=name_dataset, startrow=row-1, startcol=column-1)
         row += df.shape[0] + 4    
 
-
     writer.sheets[name_dataset].cell(row=row, column=column).value = "MeanAccuracy"
     row += 1
     dataframes[i+1].to_excel(writer, sheet_name=name_dataset, startrow=row-1, startcol=column-1)
 
     writer.close()
     return 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 def predict_explain_models(model, X_train, X_test, y_test, device, rf):
     y_pred = torch.from_numpy(model.predict(X_test)).to(device)
@@ -176,8 +169,8 @@ def cross_validation_process(trainloader, testloader, y_dim, opt, device, criter
 
     optimizer, scheduler = select_optimizer(model, opt.optimizer, opt.scheduler, opt.epochs, opt.lr)
 
-    model = train(model, trainloader, opt.task, 5, device, criterion, opt.optimizer, optimizer, scheduler)
-    #model = train(model, trainloader, opt.task, opt.epochs, device, criterion, opt.optimizer, optimizer, scheduler)
+    #model = train(model, trainloader, opt.task, 5, device, criterion, opt.optimizer, optimizer, scheduler)
+    model = train(model, trainloader, opt.task, opt.epochs, device, criterion, opt.optimizer, optimizer, scheduler)
     print("\tModelo entrenado, calculando métricas...")
     
     explainator = models.ExplainationGenerator(model)

@@ -3,4 +3,16 @@ This project presents an Explainable Transformer for working with tabular data i
 
 The explanation is provided locally as the importance of the variables to explain how the model has arrived at the results obtained with the input example.
 
+# Execution
+
+Example for execution
+
+```
+main.py --typeExecution loadData --dset_id 61 --task multiclass
+main.py --typeExecution train --dset_id 61 --task multiclass
+```
+
+
+
+
 

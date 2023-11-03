@@ -106,6 +106,7 @@ else:
     cat_dims = np.append(np.array([1]),np.array(cat_dims)).astype(int) #Appending 1 for CLS token, this is later used to generate embeddings.
     nfeat_orig = folders["train"]["fold0"].cat.shape[1] + folders["train"]["fold0"].cont.shape[1] 
     limit = nfeat_orig - int(nfeat_orig * 0.75) #AVANZAR NO HASTA LA MITAD SINO HASTA EL 75%
+    features_names = [data[1] for _, data in enumerate(folders["train"]["fold0"].dataCat)] + [data[1] for _, data in enumerate(folders["train"]["fold0"].dataCont)]
     
     if (nfeat_orig + 1) > 100:
         opt.embedding_size = min(8,opt.embedding_size)
@@ -129,20 +130,17 @@ else:
     
 
     print("COMENZANDO VALIDACIÓN CRUZADA...\n")
-    num_folders = 3#len(folders["train"])
+    num_folders = len(folders["train"])
     criterion = select_criterion(y_dim, opt.task, device)
     dict_accuracy = {}
     dict_explanation = {}
     name_columns = ["particion"+str(k) for k in range(0, num_folders)]
     name_rows = ["nfeat"+str(nf) for nf in range(nfeat_orig, limit-1, -1)]
     print("----------------------------------------------Transformer: ")
-    dataloader_folders = copy.deepcopy(folders)
-    #dict_model_accuracy = {}
-    #dict_model_explanation = {}
+    dataloader_folders = copy.deepcopy(folders)    
     accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
-        #dict_model_accuracy["particion"+str(k)] = {}
-        #dict_model_explanation["particion"+str(k)] = {}
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
         testloader = DataLoader(dataloader_folders["test"]["fold"+str(k)], batch_size=len(dataloader_folders["test"]["fold"+str(k)]), shuffle=False,num_workers=4) #print("\tNº datos en test: " + str(len(testloader.dataset)))print("\tNº datos en test: " + str(len(testloader.dataset)))
@@ -151,14 +149,12 @@ else:
 
         while nfeat >= limit:
             expls, metric_value = cross_validation_process(trainloader, testloader, y_dim, opt, device, criterion)
-            #dict_model_accuracy["particion"+str(k)]["nfeat"+str(nfeat)] = metric_value.item()
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
-            mean_feature_relevance = mms.fit_transform(expls.mean(dim=0).cpu().detach().numpy().reshape(-1, 1)).reshape(1, -1)
-            #dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)] = {}            
-            #expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
-            #for key in expl_for_save:
-            #   dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)][key] = float(expl_for_save[key])
+            mean_feature_relevance = mms.fit_transform(expls.mean(dim=0).cpu().detach().numpy().reshape(-1, 1)).reshape(1, -1)       
+            expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
+            for key in expl_for_save:
+                explanation[k][nfeat_orig-nfeat][key] = np.float64(expl_for_save[key])
             feature_deleted = np.argmin(mean_feature_relevance)            
             print("\t\tNombre variables: " + str(attribute_names_ordered))
             print("\t\tRelevancia de las variables: " + str(mean_feature_relevance))
@@ -169,11 +165,13 @@ else:
         gc.collect()
 
     dict_accuracy["Transformer"] = pd.DataFrame(accuracy.transpose(), columns=name_columns, index=name_rows) 
-    #dict_accuracy["Transformer"] = dict_model_accuracy
-    #dict_explanation["Transformer"] = dict_model_explanation
+    dfs_explanation = []
+    for feature in features_names:
+        dfs_explanation.append((feature, pd.DataFrame(explanation[feature].transpose(), columns=name_columns, index=name_rows)))
+    dict_explanation["Transformer"] = dfs_explanation
 
 
-    
+
 
 
 
@@ -184,12 +182,9 @@ else:
     svc = SVC(kernel="linear", probability=True)
     print("\n\n---------------------------------------------SVM: ")
     dataloader_folders = copy.deepcopy(folders)
-    #dict_model_accuracy = {}
-    #dict_model_explanation = {}
     accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
-        #dict_model_accuracy["particion"+str(k)] = {}
-        #dict_model_explanation["particion"+str(k)] = {}
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
         testloader = DataLoader(dataloader_folders["test"]["fold"+str(k)], batch_size=len(dataloader_folders["test"]["fold"+str(k)]), shuffle=False,num_workers=4) #print("\tNº datos en test: " + str(len(testloader.dataset)))print("\tNº datos en test: " + str(len(testloader.dataset)))
@@ -200,14 +195,12 @@ else:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             svc.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(svc, X_train, X_test, y_test, device, False)
-            #dict_model_accuracy["particion"+str(k)]["nfeat"+str(nfeat)] = metric_value.item()
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
             mean_feature_relevance = mms.fit_transform(expls.mean(dim=0).cpu().detach().numpy().reshape(-1, 1)).reshape(1, -1)
-            #dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)] = {}            
-            #expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
-            #for key in expl_for_save:
-            #   dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)][key] = float(expl_for_save[key])
+            expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
+            for key in expl_for_save:
+                explanation[k][nfeat_orig-nfeat][key] = np.float64(expl_for_save[key])
             feature_deleted = np.argmin(mean_feature_relevance)                  
             print("\t\tNombre variables: " + str(attribute_names_ordered))
             print("\t\tRelevancia de las variables: " + str(mean_feature_relevance))
@@ -218,11 +211,10 @@ else:
         gc.collect()
 
     dict_accuracy["SVM"] = pd.DataFrame(accuracy.transpose(), columns=name_columns, index=name_rows) 
-    #dict_accuracy["SVM"] = dict_model_accuracy
-    #dict_explanation["SVM"] = dict_model_explanation
-
-
-
+    dfs_explanation = []
+    for feature in features_names:
+        dfs_explanation.append((feature, pd.DataFrame(explanation[feature].transpose(), columns=name_columns, index=name_rows)))
+    dict_explanation["SVM"] = dfs_explanation
 
 
 
@@ -233,12 +225,9 @@ else:
     knn = KNeighborsClassifier(n_neighbors=3)
     print("\n\n---------------------------------------------KNN: ")
     dataloader_folders = copy.deepcopy(folders)
-    #dict_model_accuracy = {}
-    #dict_model_explanation = {}
     accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
-        #dict_model_accuracy["particion"+str(k)] = {}
-        #dict_model_explanation["particion"+str(k)] = {}
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
         testloader = DataLoader(dataloader_folders["test"]["fold"+str(k)], batch_size=len(dataloader_folders["test"]["fold"+str(k)]), shuffle=False,num_workers=4) #print("\tNº datos en test: " + str(len(testloader.dataset)))print("\tNº datos en test: " + str(len(testloader.dataset)))
@@ -249,14 +238,12 @@ else:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             knn.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(knn, X_train, X_test, y_test, device, False)
-            #dict_model_accuracy["particion"+str(k)]["nfeat"+str(nfeat)] = metric_value.item()
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
             mean_feature_relevance = mms.fit_transform(expls.mean(dim=0).cpu().detach().numpy().reshape(-1, 1)).reshape(1, -1)
-            #dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)] = {}            
-            #expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
-            #for key in expl_for_save:
-            #   dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)][key] = float(expl_for_save[key])
+            expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
+            for key in expl_for_save:
+                explanation[k][nfeat_orig-nfeat][key] = np.float64(expl_for_save[key])
             feature_deleted = np.argmin(mean_feature_relevance)  
             print("\t\tNombre variables: " + str(attribute_names_ordered))
             print("\t\tRelevancia de las variables: " + str(mean_feature_relevance))
@@ -267,8 +254,10 @@ else:
         gc.collect()
 
     dict_accuracy["KNN"] = pd.DataFrame(accuracy.transpose(), columns=name_columns, index=name_rows) 
-    #dict_accuracy["KNN"] = dict_model_accuracy
-    #dict_explanation["KNN"] = dict_model_explanation
+    dfs_explanation = []
+    for feature in features_names:
+        dfs_explanation.append((feature, pd.DataFrame(explanation[feature].transpose(), columns=name_columns, index=name_rows)))
+    dict_explanation["KNN"] = dfs_explanation
 
 
 
@@ -282,12 +271,9 @@ else:
     mlp = MLPClassifier()
     print("\n\n---------------------------------------------MLP: ")
     dataloader_folders = copy.deepcopy(folders)
-    #dict_model_accuracy = {}
-    #dict_model_explanation = {}
     accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
-        #dict_model_accuracy["particion"+str(k)] = {}
-        #dict_model_explanation["particion"+str(k)] = {}
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
         testloader = DataLoader(dataloader_folders["test"]["fold"+str(k)], batch_size=len(dataloader_folders["test"]["fold"+str(k)]), shuffle=False,num_workers=4) #print("\tNº datos en test: " + str(len(testloader.dataset)))print("\tNº datos en test: " + str(len(testloader.dataset)))
@@ -298,14 +284,12 @@ else:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
-            #dict_model_accuracy["particion"+str(k)]["nfeat"+str(nfeat)] = metric_value.item()
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
             mean_feature_relevance = mms.fit_transform(expls.mean(dim=0).cpu().detach().numpy().reshape(-1, 1)).reshape(1, -1)
-            #dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)] = {}            
-            #expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
-            #for key in expl_for_save:
-            #   dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)][key] = float(expl_for_save[key])
+            expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
+            for key in expl_for_save:
+                explanation[k][nfeat_orig-nfeat][key] = np.float64(expl_for_save[key])
             feature_deleted = np.argmin(mean_feature_relevance)  
             print("\t\tNombre variables: " + str(attribute_names_ordered))
             print("\t\tRelevancia de las variables: " + str(mean_feature_relevance))
@@ -316,16 +300,17 @@ else:
         gc.collect()
 
     dict_accuracy["MLP"] = pd.DataFrame(accuracy.transpose(), columns=name_columns, index=name_rows) 
-    #dict_accuracy["MLP"] = dict_model_accuracy
-    #dict_explanation["MLP"] = dict_model_explanation
+    dfs_explanation = []
+    for feature in features_names:
+        dfs_explanation.append((feature, pd.DataFrame(explanation[feature].transpose(), columns=name_columns, index=name_rows)))
+    dict_explanation["MLP"] = dfs_explanation
 
 
 
 
-    result_path = "." + os.sep + opt.saveresultroot
-    if not os.path.exists(result_path):
-        os.makedirs(result_path)
-    export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig-limit+1, name_columns, name_rows)
+
+
+
 
 
 
@@ -335,11 +320,9 @@ else:
     rf = RandomForestClassifier()
     print("\n\n---------------------------------------------Random Forest: ")
     dataloader_folders = copy.deepcopy(folders)
-    dict_model_accuracy = {}
-    dict_model_explanation = {}
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):        
-        dict_model_accuracy["particion"+str(k)] = {}
-        dict_model_explanation["particion"+str(k)] = {}
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
         testloader = DataLoader(dataloader_folders["test"]["fold"+str(k)], batch_size=len(dataloader_folders["test"]["fold"+str(k)]), shuffle=False,num_workers=4) #print("\tNº datos en test: " + str(len(testloader.dataset)))print("\tNº datos en test: " + str(len(testloader.dataset)))
@@ -348,15 +331,14 @@ else:
 
         while nfeat >= limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
-            rf.fit(X_train, y_train.ravel())
-            expls, metric_value = predict_explain_models(rf, X_train, X_test, y_test, device, False)
-            dict_model_accuracy["particion"+str(k)]["nfeat"+str(nfeat)] = metric_value.item()
+            mlp.fit(X_train, y_train.ravel())
+            expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
+            accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
             mean_feature_relevance = mms.fit_transform(expls.mean(dim=0).cpu().detach().numpy().reshape(-1, 1)).reshape(1, -1)
-            dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)] = {}            
             expl_for_save = dict(zip(attribute_names_ordered, mean_feature_relevance[0]))
             for key in expl_for_save:
-               dict_model_explanation["particion"+str(k)]["nfeat"+str(nfeat)][key] = float(expl_for_save[key])
+                explanation[k][nfeat_orig-nfeat][key] = np.float64(expl_for_save[key])
             feature_deleted = np.argmin(mean_feature_relevance)  
             print("\t\tNombre variables: " + str(attribute_names_ordered))
             print("\t\tRelevancia de las variables: " + str(mean_feature_relevance))
@@ -366,8 +348,11 @@ else:
         torch.cuda.empty_cache()
         gc.collect()
 
-    dict_accuracy["RandomForest"] = dict_model_accuracy
-    dict_explanation["RandomForest"] = dict_model_explanation
+    dict_accuracy["RandomForest"] = pd.DataFrame(accuracy.transpose(), columns=name_columns, index=name_rows) 
+    dfs_explanation = []
+    for feature in features_names:
+        dfs_explanation.append((feature, pd.DataFrame(explanation[feature].transpose(), columns=name_columns, index=name_rows)))
+    dict_explanation["RandomForest"] = dfs_explanation
 
 
 
@@ -375,21 +360,11 @@ else:
 
 
 
-
-
-    result_path = "." + os.sep + opt.saveresultroot + os.sep +  opt.task + os.sep + str(opt.dset_id)
+    result_path = "." + os.sep + opt.saveresultroot
     if not os.path.exists(result_path):
         os.makedirs(result_path)
-
-    result_file = open(result_path + os.sep + "accuracy.json", "w")
-    result_file.write(json.dumps(dict_accuracy, indent=6))
-    result_file.close()
-
-    result_file = open(result_path + os.sep + "explanation.json", "w")
-    result_file.write(json.dumps(dict_explanation, indent=6))
-    result_file.close()
-
-    print("ee")
+    export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig-limit+1, name_columns, name_rows)
+    export_explanation_to_excel(result_path, trainloader.dataset.name, dict_explanation)
 
 
 
@@ -430,21 +405,6 @@ else:
 
 
 
-
-
-
-
-
-
-
-
-    """result_path = "." + os.sep + opt.saveresultroot + os.sep +  opt.task + os.sep + str(opt.dset_id)
-    if not os.path.exists(result_path):
-        os.makedirs(result_path)
-
-    result_file = open(result_path + os.sep + "accuracy.json", "w")
-    result_file.write(json.dumps({k: v.tolist() for k, v in accuracy.items()}))
-    result_file.close()"""
 
     print("END")
 
