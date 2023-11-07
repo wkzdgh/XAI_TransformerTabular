@@ -30,7 +30,7 @@ def export_explanation_to_excel(result_path, name_dataset, dict_explanation):
     create_xlsx(path, name_dataset)
     create_sheet(path, name_dataset)
 
-    writer = pd.ExcelWriter(path=(result_path + os.sep + "explanation.xlsx"), mode="a", engine="openpyxl", if_sheet_exists="overlay")
+    writer = pd.ExcelWriter(path=path, mode="a", engine="openpyxl", if_sheet_exists="overlay")
     
     row = 1
     for key in dict_explanation:
@@ -54,7 +54,7 @@ def export_accuracy_to_excel(result_path, name_dataset, dict_accuracy, nfeats, n
     create_xlsx(path, name_dataset)
     create_sheet(path, name_dataset)
     
-    writer = pd.ExcelWriter(path=(result_path + os.sep + "accuracy.xlsx"), mode="a", engine="openpyxl", if_sheet_exists="overlay")
+    writer = pd.ExcelWriter(path=path, mode="a", engine="openpyxl", if_sheet_exists="overlay")
 
     dataframes = []
     df_medias = pd.DataFrame(columns=name_nfeats, index=dict_accuracy.keys())
@@ -169,7 +169,8 @@ def cross_validation_process(trainloader, testloader, y_dim, opt, device, criter
 
     optimizer, scheduler = select_optimizer(model, opt.optimizer, opt.scheduler, opt.epochs, opt.lr)
 
-    #model = train(model, trainloader, opt.task, 5, device, criterion, opt.optimizer, optimizer, scheduler)
+    
+    #model = train(model, trainloader, opt.task, 15, device, criterion, opt.optimizer, optimizer, scheduler)
     model = train(model, trainloader, opt.task, opt.epochs, device, criterion, opt.optimizer, optimizer, scheduler)
     print("\tModelo entrenado, calculando métricas...")
     

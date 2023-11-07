@@ -15,8 +15,8 @@
             //esto nuevo añadido para ejecutarse con parámetros
             "args": [
                 "--typeExecution", "train", 
-                "--dset_id", "15",
-                "--task", "binary", //       multiclass 
+                "--dset_id", "61",
+                "--task", "multiclass", //  binary      
             ]
         }
     ]
