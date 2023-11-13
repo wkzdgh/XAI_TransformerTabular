@@ -170,7 +170,7 @@ def cross_validation_process(trainloader, testloader, y_dim, opt, device, criter
     optimizer, scheduler = select_optimizer(model, opt.optimizer, opt.scheduler, opt.epochs, opt.lr)
 
     
-    #model = train(model, trainloader, opt.task, 15, device, criterion, opt.optimizer, optimizer, scheduler)
+    #model = train(model, trainloader, opt.task, 3, device, criterion, opt.optimizer, optimizer, scheduler)
     model = train(model, trainloader, opt.task, opt.epochs, device, criterion, opt.optimizer, optimizer, scheduler)
     print("\tModelo entrenado, calculando métricas...")
     

@@ -135,11 +135,11 @@ else:
     dict_accuracy = {}
     dict_explanation = {}
     name_columns = ["particion"+str(k) for k in range(0, num_folders)]
-    name_rows = ["nfeat"+str(nf) for nf in range(nfeat_orig, limit-1, -1)]
+    name_rows = ["nfeat"+str(nf) for nf in range(nfeat_orig, 0, -1)]#limit-1, -1)]
     print("----------------------------------------------Transformer: ")
     dataloader_folders = copy.deepcopy(folders)    
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1)) #nfeat_orig-limit+1 también abajo
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -147,7 +147,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]  
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             expls, metric_value = cross_validation_process(trainloader, testloader, y_dim, opt, device, criterion)
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
@@ -176,8 +176,8 @@ else:
 
     print("----------------------------------------------Transformer INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)    
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -185,7 +185,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]  
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             expls, metric_value = cross_validation_process(trainloader, testloader, y_dim, opt, device, criterion)
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
@@ -223,8 +223,8 @@ else:
     svc = SVC(kernel="linear", probability=True)
     print("\n\n---------------------------------------------SVM: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -232,7 +232,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             svc.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(svc, X_train, X_test, y_test, device, False)
@@ -263,8 +263,8 @@ else:
 
     print("\n\n---------------------------------------------SVM INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -272,7 +272,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             svc.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(svc, X_train, X_test, y_test, device, False)
@@ -308,8 +308,8 @@ else:
     knn = KNeighborsClassifier(n_neighbors=3)
     print("\n\n---------------------------------------------KNN: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -317,7 +317,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             knn.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(knn, X_train, X_test, y_test, device, False)
@@ -348,8 +348,8 @@ else:
 
     print("\n\n---------------------------------------------KNN INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -357,7 +357,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             knn.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(knn, X_train, X_test, y_test, device, False)
@@ -396,8 +396,8 @@ else:
     mlp = MLPClassifier()
     print("\n\n---------------------------------------------MLP: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -405,7 +405,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -438,8 +438,8 @@ else:
 
     print("\n\n---------------------------------------------MLP INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -447,7 +447,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -482,8 +482,8 @@ else:
     rf = RandomForestClassifier()
     print("\n\n---------------------------------------------Random Forest: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):        
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -491,7 +491,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -523,8 +523,8 @@ else:
 
     print("\n\n---------------------------------------------Random Forest INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
+    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
     for k in range(0, num_folders):        
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -532,7 +532,7 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= limit:
+        while nfeat >= 1: #limit:
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -567,7 +567,7 @@ else:
     result_path = "." + os.sep + opt.saveresultroot
     if not os.path.exists(result_path):
         os.makedirs(result_path)
-    export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig-limit+1, name_columns, name_rows)
+    export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig, name_columns, name_rows)#-limit+1, name_columns, name_rows)
     export_explanation_to_excel(result_path, trainloader.dataset.name, dict_explanation)
 
 
