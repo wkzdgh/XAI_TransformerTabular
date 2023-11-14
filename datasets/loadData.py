@@ -59,8 +59,6 @@ def getDataFromDataset(dataset_openml, task, k=5):
         X["random"+str(i)] = [random.random() for _ in range(0, X.shape[0])]
         attribute_names.append("random"+str(i))
 
-
-
     attribute_names.insert(0, "[CLS]")
     if task in ["binary", "multiclass"]:
         class_names = list(y.unique())
@@ -68,7 +66,6 @@ def getDataFromDataset(dataset_openml, task, k=5):
         class_names = []
     
     categorical_names = X.columns[list(np.where(np.array(categorical_indicator)==True)[0])].tolist()
-    #cont_names = list(set(X.columns.tolist()) - set(categorical_names))
     cat_idxs = list(np.where(np.array(categorical_indicator)==True)[0])
     con_idxs = list(set(range(len(X.columns))) - set(cat_idxs))
     cont_names = list(X.columns[con_idxs])

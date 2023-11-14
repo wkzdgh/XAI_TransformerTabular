@@ -597,7 +597,8 @@ else:
     result_path = "." + os.sep + opt.saveresultroot
     if not os.path.exists(result_path):
         os.makedirs(result_path)
-    export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig, name_columns, name_rows)#-limit+1, name_columns, name_rows)
+    export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig-limit+1, name_columns, name_rows) # hasta el %
+    #export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig, name_columns, name_rows) # solo nos quedamos con una variable
     export_explanation_to_excel(result_path, trainloader.dataset.name, dict_explanation)
 
     print("END")
