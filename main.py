@@ -9,8 +9,6 @@ from torch.utils.data import DataLoader
 import pickle
 from sklearn.preprocessing import MinMaxScaler
 import copy
-import json
-import random
 
 from functions import select_criterion, cross_validation_process, delete_feature, join_cat_cont, predict_explain_models, export_explanation_to_excel, export_accuracy_to_excel
 from datasets.loadData import kfold
@@ -59,7 +57,8 @@ torch.manual_seed(opt.set_seed)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"\nDevice is {device}.\n")
 
-dir_datasets_path = "." + os.sep + opt.savedatasetroot + os.sep + opt.task + os.sep + str(opt.dset_id) 
+#dir_datasets_path = "." + os.sep + opt.savedatasetroot + os.sep + opt.task + os.sep + str(opt.dset_id) #cargar datos normales
+dir_datasets_path = "." + os.sep + opt.savedatasetroot + "_aleatorio" +  os.sep + opt.task + os.sep + str(opt.dset_id) #cargar datos + aleatorios
 if opt.typeExecution == "loadData":
     if not os.path.exists(dir_datasets_path):
         os.makedirs(dir_datasets_path)
@@ -135,11 +134,14 @@ else:
     dict_accuracy = {}
     dict_explanation = {}
     name_columns = ["particion"+str(k) for k in range(0, num_folders)]
-    name_rows = ["nfeat"+str(nf) for nf in range(nfeat_orig, 0, -1)]#limit-1, -1)]
+    name_rows = ["nfeat"+str(nf) for nf in range(nfeat_orig, limit-1, -1)] # hasta el % 
+    #name_rows = ["nfeat"+str(nf) for nf in range(nfeat_orig, 0, -1)] # solo nos quedamos con una variable
     print("----------------------------------------------Transformer: ")
     dataloader_folders = copy.deepcopy(folders)    
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1)) #nfeat_orig-limit+1 también abajo
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -147,7 +149,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]  
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             expls, metric_value = cross_validation_process(trainloader, testloader, y_dim, opt, device, criterion)
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
@@ -176,8 +179,10 @@ else:
 
     print("----------------------------------------------Transformer INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)    
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -185,7 +190,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]  
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             expls, metric_value = cross_validation_process(trainloader, testloader, y_dim, opt, device, criterion)
             accuracy[k][nfeat_orig-nfeat] = metric_value.item()
             attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
@@ -223,8 +229,10 @@ else:
     svc = SVC(kernel="linear", probability=True)
     print("\n\n---------------------------------------------SVM: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -232,7 +240,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             svc.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(svc, X_train, X_test, y_test, device, False)
@@ -263,8 +272,10 @@ else:
 
     print("\n\n---------------------------------------------SVM INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -272,7 +283,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             svc.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(svc, X_train, X_test, y_test, device, False)
@@ -308,8 +320,10 @@ else:
     knn = KNeighborsClassifier(n_neighbors=3)
     print("\n\n---------------------------------------------KNN: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -317,7 +331,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             knn.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(knn, X_train, X_test, y_test, device, False)
@@ -348,8 +363,10 @@ else:
 
     print("\n\n---------------------------------------------KNN INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -357,7 +374,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             knn.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(knn, X_train, X_test, y_test, device, False)
@@ -396,8 +414,10 @@ else:
     mlp = MLPClassifier()
     print("\n\n---------------------------------------------MLP: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -405,7 +425,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -438,8 +459,10 @@ else:
 
     print("\n\n---------------------------------------------MLP INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -447,7 +470,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -482,8 +506,10 @@ else:
     rf = RandomForestClassifier()
     print("\n\n---------------------------------------------Random Forest: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):        
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -491,7 +517,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -523,8 +550,10 @@ else:
 
     print("\n\n---------------------------------------------Random Forest INVERSE: ")
     dataloader_folders = copy.deepcopy(folders)
-    accuracy = np.zeros(shape=(num_folders, nfeat_orig))#nfeat_orig-limit+1))
-    explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))])))
+    accuracy = np.zeros(shape=(num_folders, nfeat_orig-limit+1)) # hasta el % 
+    #accuracy = np.zeros(shape=(num_folders, nfeat_orig)) # solo nos quedamos con una variable
+    explanation = np.zeros(shape=(num_folders, nfeat_orig-limit+1), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # hasta el %
+    #explanation = np.zeros(shape=(num_folders, nfeat_orig), dtype=list(zip(features_names, [np.float64 for i in range(0, len(features_names))]))) # solo nos quedamos con una variable
     for k in range(0, num_folders):        
         print("Partición " + str(k))
         trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
@@ -532,7 +561,8 @@ else:
         nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
         mms = MinMaxScaler()
 
-        while nfeat >= 1: #limit:
+        while nfeat >= limit: # hasta el %
+        #while nfeat >= 1: # solo nos quedamos con una variable
             X_train, y_train, X_test, y_test = join_cat_cont(trainloader, testloader)
             mlp.fit(X_train, y_train.ravel())
             expls, metric_value = predict_explain_models(mlp, X_train, X_test, y_test, device, False)
@@ -570,153 +600,7 @@ else:
     export_accuracy_to_excel(result_path, trainloader.dataset.name, dict_accuracy, nfeat_orig, name_columns, name_rows)#-limit+1, name_columns, name_rows)
     export_explanation_to_excel(result_path, trainloader.dataset.name, dict_explanation)
 
-
-
-
-
-
-
-
-
-
-    # print("\n\n---------------------------------------------Aleatorio: ")
-    # dataloader_folders = copy.deepcopy(folders)
-    # partial_result = np.zeros(shape=(num_folders, (nfeat_orig-limit) + 1)) 
-    # for k in range(0, num_folders):
-    #     print("Partición " + str(k))
-    #     trainloader = DataLoader(dataloader_folders["train"]["fold"+str(k)], batch_size=opt.batchsize, shuffle=True,num_workers=4) #print("\tNº datos en train: " + str(len(trainloader.dataset)))
-    #     testloader = DataLoader(dataloader_folders["test"]["fold"+str(k)], batch_size=len(dataloader_folders["test"]["fold"+str(k)]), shuffle=False,num_workers=4) #print("\tNº datos en test: " + str(len(testloader.dataset)))print("\tNº datos en test: " + str(len(testloader.dataset)))
-    #     nfeat = trainloader.dataset.cat.shape[1] + trainloader.dataset.cont.shape[1]
-    #     expls, metric_value = cross_validation_process(trainloader, testloader, y_dim, opt, device, criterion)
-    #     partial_result[k][nfeat_orig - nfeat] = metric_value
-    #     torch.cuda.empty_cache()
-    #     gc.collect()
-
-    #     #mms = MinMaxScaler()
-    #     while nfeat > limit:
-    #         attribute_names_ordered = [data[1] for _, data in enumerate(trainloader.dataset.dataCat)] + [data[1] for _, data in enumerate(trainloader.dataset.dataCont)]
-    #         #mean_feature_relevance = mms.fit_transform(expls.mean(dim=0).cpu().detach().numpy().reshape(-1, 1)).reshape(1, -1)
-    #         #feature_deleted = np.argmin(mean_feature_relevance)  
-    #         feature_deleted = random.randint(0, nfeat-1)          
-    #         print("\t\tNombre variables: " + str(attribute_names_ordered))
-    #         #print("\t\tRelevancia de las variables: " + str(mean_feature_relevance))
-    #         print("\t\tEliminamos una variable... con id: " + str(feature_deleted))
-    #         trainloader, testloader, nfeat = delete_feature(trainloader, testloader, feature_deleted)
-    #         expls, metric_value = cross_validation_process(trainloader, testloader, y_dim, opt, device, criterion)
-    #         partial_result[k][nfeat_orig - nfeat] = metric_value
-
-    # result["Aleatorio"] = partial_result
-
-
-
-
     print("END")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # result_explain_path = "." + os.sep + opt.saveresultroot + os.sep +  opt.task + os.sep + str(opt.dset_id)
-        # if not os.path.exists(result_explain_path):
-        #     os.makedirs(result_explain_path)
-            
-        # cat_names = [testloader.dataset.dataCat[i][1] for i in range(len(testloader.dataset.dataCat))]
-        # cont_names = [name for name in testloader.dataset.attribute_names if name not in cat_names + ["[CLS]"]]
-            
-        # if types_datasets["train"].cat.shape[1] > 0:
-        #     if types_datasets["train"].cont.shape[1] > 0:
-        #         X_train = np.concatenate([types_datasets["train"].cat, types_datasets["train"].cont], axis=1)
-        #         X_test = np.concatenate([types_datasets["test"].cat, types_datasets["test"].cont], axis=1)
-        #     else:
-        #         X_train = types_datasets["train"].cat
-        #         X_test = types_datasets["test"].cat
-        # elif types_datasets["train"].cont.shape[1] > 0:
-        #     X_train = types_datasets["train"].cont
-        #     X_test = types_datasets["test"].cont
-        # else:
-        #     print("ERROR - ...")
-
-        # y_train = types_datasets["train"].y 
-        # y_test = types_datasets["test"].y
-
-        # print("\n\n--------------------------------------------\n SVM ... ")
-        # from sklearn.svm import SVC
-        # svc = SVC(kernel="linear", probability=True)
-        # svc.fit(X_train, y_train.ravel())
-        # y_pred = torch.from_numpy(svc.predict(X_test)).to(device)  #out_model = svc.predict_proba(X_test)
-        # y_pred = torch.unsqueeze(y_pred, dim=1)
-        # explainer = shap.KernelExplainer(svc.predict_proba, shap.kmeans(X_train, 10))   #, X_train)
-        # shap_values = explainer.shap_values(X_test)
-        # expls = [shap_values[y_pred[i]][i] for i in range(0, y_pred.shape[0])]
-        # expls = torch.from_numpy(np.array(expls)).to(device)
-        # print("\nMean Accuracy in test data: ", str(svc.score(X_test, y_test)))
-        # metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct = get_metrics_explanation(expls, y_pred, y_gts, opt.task, y_dim, device)
-        # write_metrics_file(result_explain_path, "a", "SVM", len(testloader.dataset), cat_names, cont_names, metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct)
-
-
-        # print("\n\n--------------------------------------------\n KNN ... ")
-        # from sklearn.neighbors import KNeighborsClassifier
-        # knn = KNeighborsClassifier(n_neighbors=3)
-        # knn.fit(X_train, y_train.ravel())
-        # y_pred = torch.from_numpy(knn.predict(X_test)).to(device)   #out_model = knn.predict_proba(X_test)
-        # y_pred = torch.unsqueeze(y_pred, dim=1)
-        # explainer = shap.KernelExplainer(knn.predict_proba, shap.kmeans(X_train, 10))     # X_train)
-        # shap_values = explainer.shap_values(X_test)
-        # expls = [shap_values[y_pred[i]][i] for i in range(0, y_pred.shape[0])]
-        # expls = torch.from_numpy(np.array(expls)).to(device)
-        # print("\nMean Accuracy in test data: ", str(knn.score(X_test, y_test)))
-        # metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct = get_metrics_explanation(expls, y_pred, y_gts, opt.task, y_dim, device)
-        # write_metrics_file(result_explain_path, "a", "KNN", len(testloader.dataset), cat_names, cont_names, metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct)
-
-
-        # print("\n\n--------------------------------------------\n MLP ... ")
-        # from sklearn.neural_network import MLPClassifier
-        # mlp = MLPClassifier()
-        # mlp.fit(X_train, y_train.ravel())
-        # y_pred = torch.from_numpy(mlp.predict(X_test)).to(device)   #out_model = mlp.predict_proba(X_test)
-        # y_pred = torch.unsqueeze(y_pred, dim=1)
-        # explainer = shap.KernelExplainer(mlp.predict_proba, shap.kmeans(X_train, 10))  #, X_train)
-        # shap_values = explainer.shap_values(X_test)
-        # expls = [shap_values[y_pred[i]][i] for i in range(0, y_pred.shape[0])]
-        # expls = torch.from_numpy(np.array(expls)).to(device)
-        # print("\nMean Accuracy in test data: ", str(mlp.score(X_test, y_test)))
-        # metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct = get_metrics_explanation(expls, y_pred, y_gts, opt.task, y_dim, device)
-        # write_metrics_file(result_explain_path, "a", "MLP", len(testloader.dataset), cat_names, cont_names, metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct)
-
-
-        # print("\n\n--------------------------------------------\n Random Forest ... ")
-        # from sklearn.ensemble import RandomForestClassifier
-        # rf = RandomForestClassifier()
-        # rf.fit(X_train, y_train.ravel())
-        # y_pred = torch.from_numpy(rf.predict(X_test)).to(device)  #out_model = rf.predict_proba(X_test)
-        # y_pred = torch.unsqueeze(y_pred, dim=1)
-        # explainer = shap.TreeExplainer(rf)
-        # shap_values = explainer(X_test)
-        # expls = [np.transpose(np.transpose(shap_values.values)[y_pred[i]])[i] for i in range(0, y_pred.shape[0])]
-        # expls = torch.from_numpy(np.array(expls)).to(device)
-        # print("\nMean Accuracy in test data: ", str(rf.score(X_test, y_test)))
-        # metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct = get_metrics_explanation(expls, y_pred, y_gts, opt.task, y_dim, device)
-        # write_metrics_file(result_explain_path, "a", "Random Forest", len(testloader.dataset), cat_names, cont_names, metric_name, metric_value, mean_feature_relevance, mean_feature_relevance_correct, mean_relevance_classes_y_gts, mean_relevance_classes_y_pred, mean_relevance_classes_y_correct)
 
 torch.cuda.empty_cache()
 gc.collect()

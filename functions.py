@@ -26,7 +26,8 @@ def create_sheet(path, name_dataset):
         wb.save(path)
 
 def export_explanation_to_excel(result_path, name_dataset, dict_explanation):
-    path = result_path + os.sep + "explanation.xlsx"
+    #path = result_path + os.sep + "explanation.xlsx"
+    path = result_path + os.sep + "explanationAleatorio.xlsx"
     create_xlsx(path, name_dataset)
     create_sheet(path, name_dataset)
 
@@ -50,7 +51,8 @@ def export_explanation_to_excel(result_path, name_dataset, dict_explanation):
     return 0
 
 def export_accuracy_to_excel(result_path, name_dataset, dict_accuracy, nfeats, name_folders, name_nfeats):
-    path = result_path + os.sep + "accuracy.xlsx"
+    #path = result_path + os.sep + "accuracy.xlsx"
+    path = result_path + os.sep + "accuracyAleatorio.xlsx"
     create_xlsx(path, name_dataset)
     create_sheet(path, name_dataset)
     

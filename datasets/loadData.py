@@ -5,6 +5,7 @@ import torch
 from collections import namedtuple
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedKFold
+import random
 
 def data_split(X, y, nan_mask, indices):
     x_d = {
@@ -52,6 +53,14 @@ class Dataset(torch.utils.data.Dataset):
 
 def getDataFromDataset(dataset_openml, task, k=5):
     X, y, categorical_indicator, attribute_names = dataset_openml.get_data(dataset_format="dataframe", target=dataset_openml.default_target_attribute)
+    
+    # Crear y añadir variables aleatorias (ruido)
+    for i in range(0, X.shape[1]):
+        X["random"+str(i)] = [random.random() for _ in range(0, X.shape[0])]
+        attribute_names.append("random"+str(i))
+
+
+
     attribute_names.insert(0, "[CLS]")
     if task in ["binary", "multiclass"]:
         class_names = list(y.unique())
