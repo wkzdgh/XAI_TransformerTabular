@@ -51,7 +51,7 @@ class Dataset(torch.utils.data.Dataset):
         return np.concatenate((self.cls[idx], self.cat[idx])), self.cont[idx], self.y[idx], np.concatenate((self.cls_mask[idx], self.cat_mask[idx])), self.cont_mask[idx]
 
 
-def getDataFromDataset(dataset_openml, task, k=5):
+def getDataFromDataset(dataset_openml, seed, task, k=5):
     X, y, categorical_indicator, attribute_names = dataset_openml.get_data(dataset_format="dataframe", target=dataset_openml.default_target_attribute)
     
     # Crear y añadir variables aleatorias (ruido)
@@ -95,7 +95,7 @@ def getDataFromDataset(dataset_openml, task, k=5):
         y = y_l_enc.fit_transform(y)
     num_classes = len(np.unique(y))
 
-    kf = StratifiedKFold(n_splits=k)
+    kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
     folders_index = {}
     for i, (train_index, test_index) in enumerate(kf.split(X, y)):
         folders_index[i] = {"train_index":train_index,"test_index": test_index}
@@ -141,7 +141,7 @@ def getDataFromDataset(dataset_openml, task, k=5):
 def kfold(id_dataset, seed, task, k=5):
     np.random.seed(seed)
     dataset_openml = openml.datasets.get_dataset(id_dataset)
-    attribute_names, class_names, cat, cont, y_l_enc, folders = getDataFromDataset(dataset_openml, task, k)
+    attribute_names, class_names, cat, cont, y_l_enc, folders = getDataFromDataset(dataset_openml, seed, task, k)
 
     for _, key in enumerate(folders):
         datasetTrain = Dataset(dataset_openml, attribute_names, class_names, cat, cont, y_l_enc, folders[key]["train"])
